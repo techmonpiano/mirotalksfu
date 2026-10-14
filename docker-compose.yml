@@ -1,6 +1,7 @@
 # asapllc deployment: hi.asapllc.com via shared cloudflared (tunnel 444be3d8) + Cloudflare Access.
 # 3010 is NOT published; cloudflared reaches mirotalksfu:3010 on mirotalksfu-network.
-# Media 40000-40100 tcp/udp is published and port-forwarded on pfSense to 192.168.1.55.
+# SFU_SERVER=true: one mediasoup WebRtcServer port per worker (40000..40000+SFU_NUM_WORKERS), so only
+# 40000-40002 is published (was 40000-40100 = ~400 docker-proxy procs, ~2 GB RSS). pfSense still forwards 40000-40100.
 services:
     mirotalksfu:
         image: mirotalk/sfu@sha256:0c20ff5101fc87d550a11d5e01b41ce40b7b59eb03e9da7a2652cf7bfe166f06
@@ -9,11 +10,16 @@ services:
         user: "1000:1000"
         restart: unless-stopped
         ports:
-            - "40000-40100:40000-40100/tcp"
-            - "40000-40100:40000-40100/udp"
+            - "40000-40002:40000-40002/tcp"
+            - "40000-40002:40000-40002/udp"
         volumes:
             - ./app/src/config.js:/src/app/src/config.js:ro
             - ./.env:/src/.env:ro
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
         networks:
             - mirotalksfu-network
         deploy:
