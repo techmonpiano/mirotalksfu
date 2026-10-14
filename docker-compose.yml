@@ -1,0 +1,26 @@
+# asapllc deployment: hi.asapllc.com via shared cloudflared (tunnel 444be3d8) + Cloudflare Access.
+# 3010 is NOT published; cloudflared reaches mirotalksfu:3010 on mirotalksfu-network.
+# Media 40000-40100 tcp/udp is published and port-forwarded on pfSense to 192.168.1.55.
+services:
+    mirotalksfu:
+        image: mirotalk/sfu@sha256:0c20ff5101fc87d550a11d5e01b41ce40b7b59eb03e9da7a2652cf7bfe166f06
+        container_name: mirotalksfu
+        hostname: mirotalksfu
+        user: "1000:1000"
+        restart: unless-stopped
+        ports:
+            - "40000-40100:40000-40100/tcp"
+            - "40000-40100:40000-40100/udp"
+        volumes:
+            - ./app/src/config.js:/src/app/src/config.js:ro
+            - ./.env:/src/.env:ro
+        networks:
+            - mirotalksfu-network
+        deploy:
+            resources:
+                limits:
+                    memory: 2G
+
+networks:
+    mirotalksfu-network:
+        name: mirotalksfu-network
