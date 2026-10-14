@@ -1,4 +1,4 @@
-# asapllc deployment: hi.asapllc.com via shared cloudflared (tunnel 444be3d8) + Cloudflare Access.
+# asapllc deployment: meet.asapllc.com via shared cloudflared (tunnel 444be3d8) + Cloudflare Access.
 # 3010 is NOT published; cloudflared reaches mirotalksfu:3010 on mirotalksfu-network.
 # SFU_SERVER=true: one mediasoup WebRtcServer port per worker (40000..40000+SFU_NUM_WORKERS), so only
 # 40000-40002 is published (was 40000-40100 = ~400 docker-proxy procs, ~2 GB RSS). pfSense still forwards 40000-40100.
