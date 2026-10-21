@@ -96,7 +96,7 @@ module.exports = {
          */
         console: {
             timeZone: 'UTC',
-            debug: ENVIRONMENT !== 'production',
+            debug: process.env.LOGS_DEBUG === 'true' || ENVIRONMENT !== 'production', // asapllc: LOGS_DEBUG=true in .env
             json: process.env.LOGS_JSON === 'true',
             json_pretty: process.env.LOGS_JSON_PRETTY === 'true',
             colors: process.env.LOGS_JSON === 'true' ? false : true,

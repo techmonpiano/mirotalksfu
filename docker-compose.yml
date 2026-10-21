@@ -15,11 +15,13 @@ services:
         volumes:
             - ./app/src/config.js:/src/app/src/config.js:ro
             - ./.env:/src/.env:ro
+            # asapllc fork: serve patched client code (screen-share reconcile fix) over the image copy
+            - ./public/:/src/public/:ro
         logging:
             driver: json-file
             options:
-                max-size: "10m"
-                max-file: "3"
+                max-size: "50m"
+                max-file: "5"
         networks:
             - mirotalksfu-network
         deploy:

@@ -3964,7 +3964,9 @@ class RoomClient {
             this.consumers.set(consumer.id, consumer);
             this.consumersProducer.set(producer_id, consumer.id);
 
+            console.log('HANDLE_CONSUMER start', { consumer_id: consumer.id, producer_id, type }); // asapllc diag
             await this.handleConsumer(consumer.id, type, stream, peer_name, peer_info);
+            console.log('HANDLE_CONSUMER done', { consumer_id: consumer.id, producer_id, type }); // asapllc diag
 
             // https://mediasoup.discourse.group/t/create-server-side-consumers-with-paused-true/244
             const resumed = await this.resumeConsumerWithRetry(consumer.id, type);
@@ -3977,6 +3979,9 @@ class RoomClient {
                 this.removeConsumer(consumer.id, kind);
                 return;
             }
+
+            // asapllc fork diag: warn if a resumed video consumer decodes no frame within 10s
+            if (kind === 'video') this.checkFirstFrame(consumer, producer_id, type);
 
             if (kind === 'video' && isParticipantsListOpen) {
                 await getRoomParticipants();
@@ -4013,9 +4018,44 @@ class RoomClient {
         }
     }
 
+    // asapllc fork diag: MEDIA_FIRST_FRAME_OK / MEDIA_FIRST_FRAME_MISSING in the browser console
+    checkFirstFrame(consumer, producer_id, type, delayMs = 10000) {
+        setTimeout(async () => {
+            try {
+                if (consumer.closed || this.consumers.get(consumer.id) !== consumer) return;
+                const report = await consumer.getStats();
+                let packets = 0;
+                let frames = 0;
+                report.forEach((stat) => {
+                    if (stat.type === 'inbound-rtp' && !stat.isRemote) {
+                        packets += stat.packetsReceived || 0;
+                        frames += stat.framesDecoded || 0;
+                    }
+                });
+                const info = {
+                    consumer_id: consumer.id,
+                    producer_id,
+                    type,
+                    packets,
+                    frames,
+                    paused: consumer.paused,
+                    track: consumer.track?.readyState,
+                };
+                if (frames > 0) console.log('MEDIA_FIRST_FRAME_OK', info);
+                else console.warn('MEDIA_FIRST_FRAME_MISSING', info);
+            } catch (error) {
+                console.warn('MEDIA_FIRST_FRAME check failed', error);
+            }
+        }, delayMs);
+    }
+
     async resumeConsumerWithRetry(consumer_id, type) {
         try {
             const response = await this.socket.requestWithRetry('resumeConsumer', { consumer_id, type });
+            // asapllc fork: only treat the server's explicit success ack as resumed
+            if (response !== 'successfully') {
+                throw new Error(response?.error || 'Unexpected resumeConsumer response');
+            }
             this.resumedConsumers.add(consumer_id);
             console.log('Consumer resumed', { consumer_id, type, response });
             return true;
@@ -4059,7 +4099,9 @@ class RoomClient {
         try {
             const producers = await this.socket.request(
                 'getProducers',
-                { knownProducerIds: [...this.consumersProducer.keys()] },
+                // asapllc fork: ask for the FULL list so consumers that were mapped but never
+                // resumed get retried (a non-empty list hid them forever -> screen-share spinner)
+                { knownProducerIds: [] },
                 5000
             );
             await this.handleNewProducers(producers, true);
